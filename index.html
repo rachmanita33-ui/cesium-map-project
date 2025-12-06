@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Peta 3D Keren Saya</title>
+  
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+  <style>
+    body, html {
+      width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
+    }
+    
+    #wadah-peta {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+    }
+
+    .kotak-tombol {
+      position: absolute;
+      top: 20px; left: 20px;
+      z-index: 10;
+    }
+
+    button {
+      padding: 10px 20px;
+      cursor: pointer;
+      font-weight: bold;
+      border: none;
+      border-radius: 4px;
+      margin-right: 5px;
+    }
+
+    .aktif { background-color: #007bff; color: white; }
+    .biasa { background-color: white; color: black; }
+  </style>
+</head>
+<body>
+
+  <div id="wadah-peta"></div>
+
+  <div class="kotak-tombol">
+    <button id="tombol2D" class="biasa" onclick="ubahKe2D()">Mode 2D</button>
+    <button id="tombol3D" class="aktif" onclick="ubahKe3D()">Mode 3D</button>
+  </div>
+
+  <script>
+    // --- 1. SETUP TOKEN ---
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIzNDc5MTNmZC0xNGU5LTQwNmEtYmQzYy0zMjY0MTZmMWExN2EiLCJpZCI6MzY3MTgyLCJpYXQiOjE3NjUwMjEwNzJ9.RQ0mXPjl4CXLkx5tWpdS2NwAYT_v3zoS3McVOhrnTfc'; 
+    
+    // --- 2. SETUP VIEWER ---
+    const viewer = new Cesium.Viewer('wadah-peta', {
+      terrain: Cesium.Terrain.fromWorldTerrain(),
+      imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }), // Bing Maps
+      timeline: false, 
+      animation: false, 
+      sceneModePicker: false, 
+      baseLayerPicker: true, 
+    });
+
+    // --- VARIABEL GLOBAL (PENTING!) ---
+    // Kita simpan lokasi gedung di sini biar tombol bisa memanggilnya
+    let dataGedungDisimpan = null; 
+
+    // --- 3. LOGIKA TOMBOL ---
+    const btn2D = document.getElementById('tombol2D');
+    const btn3D = document.getElementById('tombol3D');
+
+    function ubahKe2D() {
+      viewer.scene.morphTo2D(1); // Ubah ke 2D
+      btn2D.className = "aktif"; 
+      btn3D.className = "biasa"; 
+
+      // PERBAIKAN: Paksa zoom ulang ke gedung setelah berubah
+      if (dataGedungDisimpan) {
+          viewer.flyTo(dataGedungDisimpan, {
+              duration: 2.0 // Durasi terbang 2 detik biar mulus
+          });
+      }
+    }
+
+    function ubahKe3D() {
+      viewer.scene.morphTo3D(1); // Ubah ke 3D
+      btn2D.className = "biasa"; 
+      btn3D.className = "aktif"; 
+
+      // PERBAIKAN: Paksa zoom ulang dengan sudut miring
+      if (dataGedungDisimpan) {
+          viewer.flyTo(dataGedungDisimpan, {
+              duration: 2.0,
+              offset: new Cesium.HeadingPitchRange(
+                  Cesium.Math.toRadians(0.0), 
+                  Cesium.Math.toRadians(-45.0), 
+                  800 
+              )
+          });
+      }
+    }
+
+    // --- 4. MEMUAT PETA GEDUNG (GEOJSON) ---
+    const fileGedung = 'fix_gedung.geojson'; 
+
+    var promise = Cesium.GeoJsonDataSource.load(fileGedung);
+
+    promise.then(function(dataSource) {
+        // SIMPAN KE VARIABEL GLOBAL
+        dataGedungDisimpan = dataSource;
+
+        viewer.dataSources.add(dataSource);
+
+        // Zoom Awal (3D Default)
+        viewer.zoomTo(dataSource, new Cesium.HeadingPitchRange(
+            Cesium.Math.toRadians(0.0), 
+            Cesium.Math.toRadians(-45.0), 
+            800
+        ));
+
+        var entities = dataSource.entities.values;
+
+        for (var i = 0; i < entities.length; i++) {
+            var entity = entities[i];
+
+            if (entity.polygon) {
+                entity.polygon.heightReference = Cesium.HeightReference.CLAMP_TO_GROUND;
+                entity.polygon.extrudedHeight = 15; 
+                entity.polygon.material = Cesium.Color.ORANGE.withAlpha(1.0); 
+                entity.polygon.outline = true;
+                entity.polygon.outlineColor = Cesium.Color.BLACK;
+            }
+        }
+        console.log("Sukses memuat " + entities.length + " bangunan.");
+
+    }).otherwise(function(error){
+        console.error("Gagal memuat:", error);
+    });
+  </script>
+
+</body>
+</html>
