@@ -2,10 +2,11 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Peta Digital: GeoJSON & 3D Tiles</title>
+  <title>Peta Digital Terban (Fixed)</title>
   
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Cesium.js"></script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
   <style>
@@ -15,61 +16,45 @@
     /* LOADING SCREEN */
     #layar-loading {
         position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.85); z-index: 9999;
+        background: rgba(0, 0, 0, 0.9); z-index: 9999;
         display: flex; flex-direction: column; justify-content: center; align-items: center;
         color: white; transition: opacity 0.5s; pointer-events: none;
     }
     .spinner {
-        border: 5px solid #f3f3f3; border-top: 5px solid #007bff;
+        border: 5px solid #333; border-top: 5px solid #00d2ff;
         border-radius: 50%; width: 50px; height: 50px; animation: putar 1s linear infinite; margin-bottom: 20px;
     }
     @keyframes putar { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* PANEL KIRI */
+    /* PANEL KONTROL KIRI */
     .panel-kiri { position: absolute; top: 20px; left: 20px; z-index: 20; display: flex; flex-direction: column; gap: 10px; }
     .grup-tombol { background: rgba(255,255,255,0.9); padding: 5px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
     .label-grup { font-size: 10px; font-weight: bold; color: #666; margin-bottom: 5px; text-transform: uppercase; }
+    
     button { padding: 8px 12px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; background: #fff; }
     button:hover { background: #f0f0f0; }
     .btn-sumber.aktif { background-color: #6f42c1; color: white; border-color:#6f42c1; } 
     .btn-camera.aktif { background-color: #007bff; color: white; border-color:#007bff; }
 
-    /* PANEL KANAN (GeoJSON Features) */
-    .panel-kanan {
-      position: absolute; top: 20px; right: 20px; z-index: 10;
-      background: rgba(255, 255, 255, 0.95); padding: 10px; border-radius: 4px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
+    /* PANEL KANAN (Fitur GeoJSON) */
+    .panel-kanan { position: absolute; top: 20px; right: 20px; z-index: 10; background: rgba(255, 255, 255, 0.95); padding: 10px; border-radius: 4px; display: none; flex-direction: column; gap: 10px; }
     
-    /* INFO PANEL */
-    #panel-info {
-      position: absolute; bottom: 80px; left: 20px; z-index: 20;
-      width: 280px; background: white; padding: 15px; display: none; border-left: 5px solid #007bff;
-      box-shadow: 0 0 15px rgba(0,0,0,0.3); border-radius: 5px;
-    }
+    /* PANEL INFO BAWAH */
+    #panel-info { position: absolute; bottom: 80px; left: 20px; z-index: 20; width: 280px; background: white; padding: 15px; display: none; border-left: 5px solid #007bff; box-shadow: 0 0 15px rgba(0,0,0,0.3); border-radius: 5px; }
     #tabel-properti { width: 100%; border-collapse: collapse; font-size: 12px; }
     #tabel-properti td { border-bottom: 1px solid #eee; padding: 4px; }
     
-    /* TOMBOL DOWNLOAD */
-    #btn-download {
-        position: absolute; bottom: 20px; right: 20px; z-index: 99;
-        background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 50px; 
-        font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.4); cursor: pointer;
-    }
+    #btn-download { position: absolute; bottom: 20px; right: 20px; z-index: 99; background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 50px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.4); cursor: pointer; display: none; }
     
-    /* DEBUG LOG */
-    #debug-log {
-        position: absolute; bottom: 0; left: 0; width: 100%; height: 100px;
-        background: rgba(0,0,0,0.8); color: lime; font-family: monospace; font-size: 11px;
-        overflow-y: scroll; z-index: 99999; padding: 10px; display: none; 
-    }
+    /* DEBUG LOG (Pojok Kiri Bawah) */
+    #debug-log { position: absolute; bottom: 0; left: 0; width: 100%; height: 100px; background: rgba(0,0,0,0.8); color: lime; font-family: monospace; font-size: 11px; overflow-y: scroll; z-index: 99999; padding: 10px; display: none; }
   </style>
 </head>
 <body>
 
   <div id="layar-loading">
       <div class="spinner"></div>
-      <div id="teks-loading">Memuat Peta...</div>
+      <div id="teks-loading">Menyiapkan Peta Digital...</div>
   </div>
 
   <div id="wadah-peta"></div>
@@ -77,9 +62,9 @@
 
   <div class="panel-kiri">
     <div class="grup-tombol">
-        <div class="label-grup">Pilih Data</div>
-        <button id="btnGeoJSON" class="btn-sumber aktif" onclick="gantiSumber('geojson')">GeoJSON (Edit)</button>
-        <button id="btn3DTiles" class="btn-sumber" onclick="gantiSumber('3dtiles')">3D Tiles (Real)</button>
+        <div class="label-grup">Sumber Data</div>
+        <button id="btn3DTiles" class="btn-sumber aktif" onclick="gantiSumber('3dtiles')">3D Tiles (Real)</button>
+        <button id="btnGeoJSON" class="btn-sumber" onclick="gantiSumber('geojson')">GeoJSON (Edit)</button>
     </div>
     <div class="grup-tombol">
         <div class="label-grup">Kamera</div>
@@ -102,13 +87,9 @@
     
     <div id="konten-geojson">
         <div style="text-align:center; margin-bottom:10px;">Luas: <b id="labelLuas" style="color:#007bff">0</b> m²</div>
-        <div style="margin-bottom:10px;">
-            <label style="font-size:12px; font-weight:bold;">Nama:</label>
-            <input type="text" id="inputNamaBaru" style="width:100%; padding:5px;">
-        </div>
-        <div style="margin-bottom:10px;">
-            <label style="font-size:12px; font-weight:bold;">Jenis:</label>
-            <select id="inputJenisBaru" style="width:100%; padding:5px;">
+        <div style="margin-bottom:10px;"><label>Nama:</label><input type="text" id="inputNamaBaru" style="width:100%;"></div>
+        <div style="margin-bottom:10px;"><label>Jenis:</label>
+            <select id="inputJenisBaru" style="width:100%;">
                 <option value="Lainnya">-- Pilih --</option>
                 <option value="Rumah">Rumah</option>
                 <option value="Kantor">Kantor</option>
@@ -123,175 +104,169 @@
   </div>
 
   <script>
-    // 1. TOKEN CESIUM (YANG SUDAH BENAR)
+    // 1. TOKEN CESIUM (Jangan diubah)
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJjNjJmNjllYi0zNWY1LTRjNTUtYjEyZS0xZTJjZTFkYmNmNjciLCJpZCI6MzY3MTgyLCJpYXQiOjE3NjY0NDkyMTd9.04ove0_LwaphuhYqwBzNo8PQ-2ZiK0gXTY1E1Uiy5Kw'; 
 
-    // Logger
     function logDebug(msg, tipe='info') {
-        const logDiv = document.getElementById('debug-log');
-        const warna = tipe === 'error' ? 'red' : (tipe === 'success' ? '#00ff00' : 'white');
-        logDiv.innerHTML += `<div style="color:${warna}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
-        logDiv.scrollTop = logDiv.scrollHeight;
+        const d = document.getElementById('debug-log');
+        d.innerHTML += `<div style="color:${tipe==='error'?'red':'lime'}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
         console.log(msg);
     }
 
-    // Setup Viewer
+    // 2. SETUP VIEWER
     const viewer = new Cesium.Viewer('wadah-peta', {
       terrain: Cesium.Terrain.fromWorldTerrain(),
       imageryProvider: new Cesium.IonImageryProvider({ assetId: 3954 }), 
-      geocoder: false, infoBox: false, selectionIndicator: true,
-      timeline: false, animation: false, baseLayerPicker: true
+      geocoder: false, infoBox: false, selectionIndicator: true, timeline: false, animation: false, baseLayerPicker: true
     });
 
-    // === TRIK PENTING: AKTIFKAN X-RAY PERMANEN UNTUK SEMUA ===
-    // Ini menjamin GeoJSON dan 3D Tiles selalu terlihat walaupun tertanam di tanah
+    // PENTING: Matikan Depth Test supaya data tidak tenggelam/bolong
     viewer.scene.globe.depthTestAgainstTerrain = false;
-    // ==========================================================
 
-    // Kamera Awal (Jogja)
+    // KAMERA START (Close Up & Miring)
     viewer.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(110.37, -7.78, 2000),
-        orientation: { heading: 0.0, pitch: -Cesium.Math.PI_OVER_TWO, roll: 0.0 }
+        destination: Cesium.Cartesian3.fromDegrees(110.37, -7.78, 400),
+        orientation: { heading: 0.0, pitch: Cesium.Math.toRadians(-25.0), roll: 0.0 }
     });
 
     let geoJsonSource = null;
     let tilesetSource = null;
     let masterGeoJSON = null;
     let selectedIndex = -1;
-    let currentMode = 'geojson';
+    let currentMode = '3dtiles';
 
-    // --- 2. LOAD GEOJSON (PERTAMA KALI) ---
-    logDebug("Memulai Load GeoJSON...", "info");
-    fetch('data_final.geojson')
-      .then(res => res.json())
-      .then(json => {
-          masterGeoJSON = json;
-          return Cesium.GeoJsonDataSource.load(json);
-      })
-      .then(ds => {
-          geoJsonSource = ds;
-          viewer.dataSources.add(ds);
-          
-          const entities = ds.entities.values;
-          for (let i = 0; i < entities.length; i++) {
-              const ent = entities[i];
-              ent.indexAsli = i; // Simpan ID untuk edit
-              if (ent.polygon) {
-                  // Setting agar GeoJSON tidak tenggelam
-                  ent.polygon.perPositionHeight = false;
-                  ent.polygon.heightReference = Cesium.HeightReference.CLAMP_TO_GROUND;
-                  ent.polygon.extrudedHeightReference = Cesium.HeightReference.RELATIVE_TO_GROUND;
-                  ent.polygon.extrudedHeight = 15;
-                  
-                  // Load atribut
-                  let jenis = ent.properties.jenis ? ent.properties.jenis.getValue() : "Lainnya";
-                  let nama = ent.properties.name ? ent.properties.name.getValue() : "Tanpa Nama";
-                  ent.jenisBangunan = jenis;
-                  ent.name = nama;
-                  updateWarna(ent, jenis);
-              }
-          }
-          logDebug("✅ GeoJSON Berhasil Dimuat!", "success");
-          
-          // Default: Tampilkan GeoJSON
-          geoJsonSource.show = true;
-          viewer.zoomTo(ds);
-          document.getElementById('layar-loading').style.display = 'none';
-      })
-      .catch(err => {
-          logDebug("❌ ERROR GEOJSON: " + err, "error");
-          document.getElementById('teks-loading').innerText = "Gagal Load GeoJSON. Cek nama file!";
-          // Hilangkan loading screen biar user bisa baca error
-           setTimeout(() => { document.getElementById('layar-loading').style.display = 'none'; }, 2000);
-      });
+    // --- 3. FUNGSI LOAD DATA UTAMA ---
+    async function initData() {
+        try {
+            // A. LOAD 3D TILES (Gedung Putih)
+            logDebug("🔄 Mengambil 3D Tiles...");
+            tilesetSource = await Cesium.Cesium3DTileset.fromIonAssetId(4262559);
+            viewer.scene.primitives.add(tilesetSource);
+            
+            // Fix Elevasi 3D Tiles (+140m)
+            const heightOffset = 140.0;
+            const boundingSphere = tilesetSource.boundingSphere;
+            const cartographic = Cesium.Cartographic.fromCartesian(boundingSphere.center);
+            const surface = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, 0.0);
+            const offset = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, heightOffset);
+            const translation = Cesium.Cartesian3.subtract(offset, surface, new Cesium.Cartesian3());
+            tilesetSource.modelMatrix = Cesium.Matrix4.fromTranslation(translation);
+            
+            tilesetSource.style = new Cesium.Cesium3DTileStyle({ color: "color('orange', 1.0)" });
+            logDebug("✅ 3D Tiles Siap!");
 
-    // --- 3. FUNGSI GANTI SUMBER (PERBAIKAN LOGIKA) ---
-    async function gantiSumber(tipe) {
+            // B. LOAD GEOJSON (Gedung Oranye)
+            logDebug("☁️ Mengunduh GeoJSON dari Ion...");
+            
+            const resource = await Cesium.IonResource.fromAssetId(4268727);
+            const json = await resource.fetchJson(); // Ambil Data Mentah
+            masterGeoJSON = json; 
+            
+            // === RAHASIA AGAR TIDAK MELAYANG: clampToGround: true ===
+            const ds = await Cesium.GeoJsonDataSource.load(json, {
+                clampToGround: true 
+            });
+            // ========================================================
+
+            geoJsonSource = ds;
+            viewer.dataSources.add(ds);
+            
+            const entities = ds.entities.values;
+            for (let i = 0; i < entities.length; i++) {
+                const ent = entities[i];
+                ent.indexAsli = i; 
+                if (ent.polygon) {
+                    // Paksa Reset Ketinggian
+                    ent.polygon.perPositionHeight = false;
+                    ent.polygon.heightReference = Cesium.HeightReference.CLAMP_TO_GROUND;
+                    
+                    // Extrude (Tinggi Gedung)
+                    ent.polygon.extrudedHeightReference = Cesium.HeightReference.RELATIVE_TO_GROUND;
+                    ent.polygon.extrudedHeight = 15;
+                    
+                    // Load Atribut
+                    let jenis = ent.properties.jenis ? ent.properties.jenis.getValue() : "Lainnya";
+                    let nama = ent.properties.name ? ent.properties.name.getValue() : "Tanpa Nama";
+                    ent.jenisBangunan = jenis;
+                    ent.name = nama;
+                    updateWarna(ent, jenis);
+                }
+            }
+            
+            // Default GeoJSON Sembunyi
+            geoJsonSource.show = false; 
+            logDebug("✅ GeoJSON Siap & Terpaku di Tanah!");
+
+            // ZOOM CANTIK (Close Up)
+            viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(110.374, -7.783, 350), 
+                orientation: {
+                    heading: 0.0,
+                    pitch: Cesium.Math.toRadians(-30.0), 
+                    roll: 0.0
+                },
+                duration: 2.5
+            });
+
+            document.getElementById('layar-loading').style.display = 'none';
+
+        } catch (e) {
+            logDebug("ERROR: " + e, 'error');
+            alert("Gagal memuat data: " + e);
+            document.getElementById('layar-loading').style.display = 'none';
+        }
+    }
+
+    // Jalankan
+    initData();
+
+    // --- 4. GANTI MODE ---
+    function gantiSumber(tipe) {
         currentMode = tipe;
         document.getElementById('panel-info').style.display = 'none';
         
-        // Update Tombol
         document.getElementById('btnGeoJSON').className = tipe==='geojson'?'btn-sumber aktif':'btn-sumber';
         document.getElementById('btn3DTiles').className = tipe==='3dtiles'?'btn-sumber aktif':'btn-sumber';
         
-        // Fitur Search/Download hanya ada di GeoJSON
-        const fiturGeo = document.getElementById('panel-fitur-geojson');
+        const panelGeo = document.getElementById('panel-fitur-geojson');
         const btnDown = document.getElementById('btn-download');
-        
+
         if (tipe === 'geojson') {
-            fiturGeo.style.display = 'block';
-            btnDown.style.display = 'block';
-            
-            if(tilesetSource) tilesetSource.show = false; // Sembunyikan 3D Tiles
             if(geoJsonSource) {
-                geoJsonSource.show = true; // Munculkan GeoJSON
-                viewer.flyTo(geoJsonSource, {duration: 1.0});
+                geoJsonSource.show = true;
+                if(tilesetSource) tilesetSource.show = false;
+                panelGeo.style.display = 'flex';
+                btnDown.style.display = 'block';
+                // Kamera diam (tidak zoom out)
+            } else {
+                alert("GeoJSON belum siap!");
             }
         } 
-        else if (tipe === '3dtiles') {
-            fiturGeo.style.display = 'none';
-            btnDown.style.display = 'none';
-            
-            if(geoJsonSource) geoJsonSource.show = false; // Sembunyikan GeoJSON
-
-            // Load 3D Tiles jika belum ada
-            if (!tilesetSource) {
-                document.getElementById('layar-loading').style.display = 'flex';
-                document.getElementById('teks-loading').innerText = "Mengambil 3D Tiles...";
-                
-                try {
-                    tilesetSource = await Cesium.Cesium3DTileset.fromIonAssetId(4262559);
-                    viewer.scene.primitives.add(tilesetSource);
-                    
-                    // --- FIX ELEVASI 3D TILES (AGAR TIDAK TENGGELAM) ---
-                    const heightOffset = 140.0; // Angkat 140 meter
-                    const boundingSphere = tilesetSource.boundingSphere;
-                    const cartographic = Cesium.Cartographic.fromCartesian(boundingSphere.center);
-                    const surface = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, 0.0);
-                    const offset = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, heightOffset);
-                    const translation = Cesium.Cartesian3.subtract(offset, surface, new Cesium.Cartesian3());
-                    tilesetSource.modelMatrix = Cesium.Matrix4.fromTranslation(translation);
-                    // ----------------------------------------------------
-
-                    // Styling (Warna Oranye biar seragam, atau hapus untuk warna asli putih)
-                    tilesetSource.style = new Cesium.Cesium3DTileStyle({
-                        color: "color('orange', 1.0)"
-                    });
-
-                    logDebug("✅ 3D Tiles Siap!", "success");
-                    await viewer.zoomTo(tilesetSource);
-
-                } catch (e) {
-                    logDebug("❌ ERROR 3D TILES: " + e, "error");
-                    alert("Gagal load 3D Tiles: " + e);
-                } finally {
-                    document.getElementById('layar-loading').style.display = 'none';
-                }
-            } else {
+        else { // 3D Tiles
+            if(tilesetSource) {
                 tilesetSource.show = true;
-                viewer.zoomTo(tilesetSource, {duration: 1.0});
+                if(geoJsonSource) geoJsonSource.show = false;
+                panelGeo.style.display = 'none';
+                btnDown.style.display = 'none';
             }
         }
     }
 
-    // --- 4. KLIK HANDLER (HYBRID) ---
+    // --- 5. KLIK INTERAKSI ---
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     handler.setInputAction(function(movement) {
         const picked = viewer.scene.pick(movement.position);
-        
-        // Reset Info
         document.getElementById('panel-info').style.display = 'none';
-
         if (!Cesium.defined(picked)) return;
 
-        // A. KLIK GEOJSON
+        // MODE GEOJSON (EDIT)
         if (currentMode === 'geojson' && picked.id && picked.id.indexAsli !== undefined) {
             selectedIndex = picked.id.indexAsli;
             const ent = picked.id;
             
             document.getElementById('konten-geojson').style.display = 'block';
             document.getElementById('konten-3dtiles').style.display = 'none';
-            document.getElementById('judul-panel').innerText = "Edit GeoJSON";
+            document.getElementById('judul-panel').innerText = "Edit Data";
             
             document.getElementById('inputNamaBaru').value = ent.name;
             document.getElementById('inputJenisBaru').value = ent.jenisBangunan || "Lainnya";
@@ -304,11 +279,11 @@
             document.getElementById('panel-info').style.display = 'block';
         }
 
-        // B. KLIK 3D TILES
+        // MODE 3D TILES (INFO)
         else if (currentMode === '3dtiles' && picked instanceof Cesium.Cesium3DTileFeature) {
             document.getElementById('konten-geojson').style.display = 'none';
             document.getElementById('konten-3dtiles').style.display = 'block';
-            document.getElementById('judul-panel').innerText = "Info 3D Tiles";
+            document.getElementById('judul-panel').innerText = "Info Real";
             
             const tabel = document.getElementById('tabel-properti');
             tabel.innerHTML = "";
@@ -320,27 +295,23 @@
             }
             document.getElementById('panel-info').style.display = 'block';
         }
-
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    // FUNGSI PENDUKUNG
+    // --- FUNGSI PENDUKUNG ---
     function simpanEdit() {
         if(selectedIndex === -1) return;
         const nama = document.getElementById('inputNamaBaru').value;
         const jenis = document.getElementById('inputJenisBaru').value;
-        const luas = document.getElementById('labelLuas').innerText;
         
         const ent = geoJsonSource.entities.values[selectedIndex];
-        ent.name = nama;
-        ent.jenisBangunan = jenis;
+        ent.name = nama; ent.jenisBangunan = jenis;
         updateWarna(ent, jenis);
         
         if(masterGeoJSON) {
             masterGeoJSON.features[selectedIndex].properties.name = nama;
             masterGeoJSON.features[selectedIndex].properties.jenis = jenis;
-            masterGeoJSON.features[selectedIndex].properties.luas_m2 = parseFloat(luas);
         }
-        alert("Data Tersimpan di Memori!");
+        alert("Tersimpan (RAM). Silakan Download.");
     }
 
     function updateWarna(ent, jenis) {
@@ -363,8 +334,8 @@
     }
     
     function cariBangunan() {
-        if(!geoJsonSource) return;
         const k = document.getElementById('inputCari').value.toLowerCase();
+        if(!geoJsonSource) return;
         const ents = geoJsonSource.entities.values;
         for(let i=0; i<ents.length; i++){
             if(ents[i].name.toLowerCase().includes(k)){
