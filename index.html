@@ -334,17 +334,60 @@
     }
     
     function cariBangunan() {
-        const k = document.getElementById('inputCari').value.toLowerCase();
-        if(!geoJsonSource) return;
-        const ents = geoJsonSource.entities.values;
-        for(let i=0; i<ents.length; i++){
-            if(ents[i].name.toLowerCase().includes(k)){
-                viewer.flyTo(ents[i], {duration:1.5, offset: new Cesium.HeadingPitchRange(0, -0.5, 200)});
-                return;
+        // 1. Ambil Input
+        const input = document.getElementById('inputCari');
+        if (!input) return; // Jaga-jaga kalau elemen hilang
+        
+        const kataKunci = input.value.toLowerCase();
+        
+        // 2. Cek Apakah Data GeoJSON Sudah Ada?
+        if(!geoJsonSource) {
+            alert("Data sedang dimuat dari Cloud, mohon tunggu sebentar...");
+            return;
+        }
+
+        const entities = geoJsonSource.entities.values;
+        let ketemu = false;
+
+        // 3. Loop Pencarian (Versi Aman)
+        for(let i = 0; i < entities.length; i++){
+            const ent = entities[i];
+            
+            // Cek dulu: Apakah gedung ini punya nama? (Biar gak error)
+            if (ent.name) {
+                if(ent.name.toLowerCase().includes(kataKunci)){
+                    
+                    // KETEMU! Lakukan aksi:
+                    
+                    // a. Pastikan kita di mode GeoJSON (biar gedungnya kelihatan)
+                    gantiSumber('geojson'); 
+
+                    // b. Terbang ke gedung itu
+                    viewer.flyTo(ent, {
+                        duration: 1.5, 
+                        offset: new Cesium.HeadingPitchRange(0, -0.5, 200)
+                    });
+
+                    // c. Pilih gedung (supaya panel edit langsung muncul)
+                    viewer.selectedEntity = ent;
+                    
+                    ketemu = true;
+                    break; // Stop mencari karena sudah ketemu
+                }
             }
         }
-        alert("Tidak ditemukan");
+
+        if (!ketemu) {
+            alert("Gedung dengan nama '" + kataKunci + "' tidak ditemukan.");
+        }
     }
+
+    // Pastikan Enter juga jalan
+    document.getElementById('inputCari').addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            cariBangunan();
+        }
+    });
 
     function toggleDebug() {
         const d = document.getElementById('debug-log');
